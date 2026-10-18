@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Oggy Rush: House Chase Edition (Fixed Audio)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: #4a044e;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    #game-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    /* TOP-LEVEL HIGH-PRIORITY MUSIC BUTTON */
+    #top-bar {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      z-index: 99999;
+      pointer-events: auto;
+    }
+    .music-btn {
+      cursor: pointer;
+      font-size: 14px;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #ec4899, #f43f5e);
+      border: 2px solid #ffffff;
+      border-radius: 30px;
+      color: #fff;
+      font-weight: 900;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      transition: all 0.15s ease-out;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .music-btn:hover {
+      transform: scale(1.06);
+    }
+    .music-btn.muted {
+      background: #475569;
+      border-color: #94a3b8;
+      color: #cbd5e1;
+    }
+
+    /* In-Game HUD */
+    #hud {
+      position: absolute;
+      top: 18px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .hud-col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .hud-card {
+      background: rgba(49, 10, 68, 0.75);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      padding: 8px 18px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fdf4ff;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+    }
+    .hud-val {
+      font-size: 22px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+    /* Fever Bar */
+    #fever-container {
+      width: 170px;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+    #fever-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #f43f5e, #fbbf24);
+      transition: width 0.15s ease-out;
+    }
+
+    /* Floating Score Popups */
+    .popup-text {
+      position: absolute;
+      font-size: 26px;
+      font-weight: 900;
+      text-shadow: 0 4px 12px rgba(0,0,0,0.8);
+      pointer-events: none;
+      animation: floatUp 0.85s forwards ease-out;
+      z-index: 15;
+    }
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0) scale(0.8); }
+      50% { transform: translateY(-40px) scale(1.2); }
+      100% { opacity: 0; transform: translateY(-80px) scale(1); }
+    }
+
+    /* Overlays */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(74, 4, 78, 0.88) 0%, rgba(30, 2, 36, 0.98) 100%);
+      backdrop-filter: blur(14px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 20;
+      color: #fff;
+      text-align: center;
+      padding: 24px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: rgba(244, 63, 94, 0.2);
+      border: 1px solid rgba(244, 63, 94, 0.5);
+      color: #fb7185;
+      border-radius: 30px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 52px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+    h1 span {
+      background: linear-gradient(135deg, #f43f5e, #fbbf24);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p {
+      font-size: 16px;
+      color: #e9d5ff;
+      max-width: 500px;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .btn {
+      background: linear-gradient(135deg, #e11d48, #be123c);
+      border: none;
+      border-radius: 14px;
+      padding: 15px 36px;
+      font-size: 17px;
+      font-weight: 800;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(225, 29, 72, 0.45);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 28px rgba(225, 29, 72, 0.6);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: none;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .btn-share {
+      background: linear-gradient(135deg, #059669, #047857);
+      box-shadow: 0 10px 24px rgba(5, 150, 105, 0.4);
+    }
+
+    /* Modal Windows */
+    .modal {
+      display: none;
+      position: absolute;
+      inset: 40px;
+      background: #3b0764;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 24px;
+      z-index: 30;
+      flex-direction: column;
+      overflow-y: auto;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
+    }
+    .modal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+    .shop-item {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      padding: 16px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Challenge a Friend Dialog */
+    #share-modal {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 440px;
+      background: #2e0854;
+      border: 2px solid #a855f7;
+      border-radius: 20px;
+      padding: 26px;
+      z-index: 99999;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.95);
+      color: #fff;
+    }
+    .share-channel-btn {
+      width: 100%;
+      margin: 6px 0;
+      padding: 12px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 800;
+      font-size: 15px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: #fff;
+    }
+    .btn-wa { background: #25d366; }
+    .btn-tg { background: #0088cc; }
+    .btn-x { background: #000000; border: 1px solid #444; }
+    .btn-copy { background: #7c3aed; border: 1px solid #c084fc; }
+
+    #share-text-preview {
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 10px;
+      color: #fbcfe8;
+      font-size: 13px;
+      line-height: 1.4;
+      resize: none;
+      height: 65px;
+    }
+
+    #game-over-screen {
+      display: none;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+<div id="game-container">
+  <!-- ALWAYS VISIBLE TOP MUSIC BUTTON -->
+  <div id="top-bar">
+    <button id="music-btn" class="music-btn">🎵 MUSIC: ON</button>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-col">
+      <div class="hud-card">
+        <span>📺 TVs:</span>
+        <span id="score-val" class="hud-val" style="color: #38bdf8;">0</span>
+      </div>
+      <div class="hud-card">
+        <span>🔥 FEVER:</span>
+        <div id="fever-container"><div id="fever-bar"></div></div>
+      </div>
+    </div>
+    <div class="hud-col" style="align-items: flex-end; margin-right: 150px;">
+      <div class="hud-card">
+        <span>🏃 DISTANCE:</span>
+        <span id="dist-val" class="hud-val" style="color: #4ade80;">0 m</span>
+      </div>
+      <div class="hud-card">
+        <span>🏆 BEST:</span>
+        <span id="best-val" class="hud-val" style="color: #fbbf24;">0 m</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Start Screen -->
+  <div id="start-screen" class="overlay">
+    <div class="badge">Oggy's House Chase</div>
+    <h1>OGGY: <span>HOUSE SPRINT</span></h1>
+    <p>Joey the Cockroach is chasing Oggy down the hallway! Jump over sofas, slide under the dining table, rescue televisions, and enjoy the theme music!</p>
+    <div class="btn-row">
+      <button class="btn" id="start-btn">START SPRINT</button>
+      <button class="btn btn-secondary" id="open-shop-btn">🛍️ CLOSET / SKINS</button>
+    </div>
+  </div>
+
+  <!-- Shop & Skins Modal -->
+  <div id="shop-modal" class="modal">
+    <h2 style="font-size: 28px;">OGGY'S CLOSET & SKINS</h2>
+    <p style="color: #d8b4fe;">Banked TVs: <span id="banked-tvs" style="color: #38bdf8; font-weight:800;">0</span></p>
+    
+    <div class="modal-grid">
+      <div class="shop-item">
+        <div style="font-size: 38px;">🐱</div>
+        <b>Classic Oggy</b>
+        <span style="font-size:12px; color:#d8b4fe;">The original homebody cat</span>
+        <button class="btn btn-secondary" style="padding: 8px 18px; font-size:14px;" id="skin-corp-btn">EQUIPPED</button>
+      </div>
+      <div class="shop-item">
+        <div style="font-size: 38px;">🕶️</div>
+        <b>Secret Agent Oggy</b>
+        <span style="font-size:12px; color:#d8b4fe;">Sunglasses & sleek suit</span>
+        <button class="btn btn-secondary" style="padding: 8px 18px; font-size:14px;" id="skin-agent-btn">50 TVs</button>
+      </div>
+      <div class="shop-item">
+        <div style="font-size: 38px;">👨‍🍳</div>
+        <b>Chef Oggy</b>
+        <span style="font-size:12px; color:#d8b4fe;">Chef hat & kitchen scarf</span>
+        <button class="btn btn-secondary" style="padding: 8px 18px; font-size:14px;" id="skin-chef-btn">100 TVs</button>
+      </div>
+    </div>
+    
+    <button class="btn btn-secondary" style="align-self: center; margin-top: auto;" id="close-shop-btn">CLOSE</button>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div id="game-over-screen" class="overlay">
+    <div class="badge" style="background:rgba(239,68,68,0.2); border-color:rgba(239,68,68,0.4); color:#f87171;">Caught by Joey!</div>
+    <h1 style="color:#f87171;">CAUGHT!</h1>
+    <p id="death-reason">Joey tripped Oggy and stole the television!</p>
+    <div class="hud-card" style="margin-bottom: 20px; font-size: 18px;">
+      Distance: <span id="final-dist" class="hud-val" style="color:#4ade80; margin: 0 10px;">0m</span> | 
+      TVs: <span id="final-tvs" class="hud-val" style="color:#38bdf8; margin-left: 10px;">0</span>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="restart-btn">RUN AGAIN</button>
+      <button class="btn btn-share" id="share-btn">📲 CHALLENGE A FRIEND</button>
+    </div>
+  </div>
+
+  <!-- Challenge a Friend Share Modal -->
+  <div id="share-modal">
+    <h3 style="font-size: 22px; margin-bottom: 6px;">CHALLENGE A FRIEND!</h3>
+    <p style="font-size: 14px; color: #d8b4fe; margin-bottom: 8px;" id="share-summary-text">Can they beat your score?</p>
+    <textarea id="share-text-preview" readonly></textarea>
+    
+    <button class="share-channel-btn btn-wa" id="share-wa-btn">💬 Share on WhatsApp</button>
+    <button class="share-channel-btn btn-tg" id="share-tg-btn">✈️ Share on Telegram</button>
+    <button class="share-channel-btn btn-x" id="share-x-btn">𝕏 Share on X (Twitter)</button>
+    <button class="share-channel-btn btn-copy" id="share-copy-btn">📋 Copy Challenge Text</button>
+    
+    <button class="btn btn-secondary" style="margin-top: 14px; width: 100%; padding: 10px;" id="close-share-btn">CLOSE</button>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   PROCEDURAL WAV AUDIO ENGINE (100% RELIABLE)
+   Generates the Oggy Theme Loop in memory as an Audio element
+   ========================================================= */
+const AudioSys = {
+  bgmAudio: null,
+  musicMuted: false,
+
+  init() {
+    if (this.bgmAudio) return;
+
+    // Synthesize the 16-step Oggy Theme Loop into a PCM WAV buffer
+    const sampleRate = 22050;
+    const tempo = 138;
+    const stepSec = 60 / tempo / 2; // ~0.217s per step
+    const totalSteps = 16;
+    const totalDuration = stepSec * totalSteps;
+    const totalSamples = Math.floor(sampleRate * totalDuration);
+    const pcmData = new Float32Array(totalSamples);
+
+    // Melody & Bass frequencies (C-minor / cartoon jazz blues)
+    const melodyNotes = [
+      523.25, 0, 659.25, 523.25, 783.99, 0, 659.25, 0,
+      587.33, 587.33, 659.25, 587.33, 523.25, 0, 392.00, 0
+    ];
+    const bassNotes = [
+      261.63, 0, 329.63, 0, 392.00, 0, 440.00, 392.00,
+      261.63, 0, 329.63, 0, 493.88, 440.00, 392.00, 329.63
+    ];
+
+    for (let i = 0; i < totalSamples; i++) {
+      const t = i / sampleRate;
+      const step = Math.floor(t / stepSec) % totalSteps;
+      const stepTime = t - step * stepSec;
+
+      let sample = 0;
+
+      // 1. Cartoon Scat Melody (brassy saw with smooth decay)
+      const mFreq = melodyNotes[step];
+      if (mFreq > 0) {
+        const env = Math.max(0, 1 - stepTime / (stepSec * 0.85));
+        const wave = 2 * ((t * mFreq) % 1) - 1; // sawtooth
+        sample += wave * env * 0.35;
+      }
+
+      // 2. Slap Bass (warm triangle wave)
+      const bFreq = bassNotes[step];
+      if (bFreq > 0) {
+        const env = Math.max(0, 1 - stepTime / (stepSec * 0.9));
+        const phase = (t * bFreq) % 1;
+        const wave = 4 * Math.abs(phase - 0.5) - 1; // triangle
+        sample += wave * env * 0.45;
+      }
+
+      // 3. Swing Drums (Kick on quarter beats, Snare on off beats)
+      if (step % 4 === 0) {
+        // Punchy Kick
+        const kickEnv = Math.max(0, 1 - stepTime / 0.1);
+        sample += Math.sin(2 * Math.PI * 65 * stepTime) * kickEnv * 0.4;
+      } else if (step % 4 === 2) {
+        // Cartoon Snare / Pop
+        const snareEnv = Math.max(0, 1 - stepTime / 0.08);
+        const noise = (Math.random() * 2 - 1) * 0.25;
+        sample += (Math.sin(2 * Math.PI * 240 * stepTime) * 0.3 + noise) * snareEnv;
+      }
+
+      pcmData[i] = Math.max(-1, Math.min(1, sample));
+    }
+
+    // Convert Float32 PCM to 16-bit Mono WAV Blob
+    const wavBlob = this.createWavBlob(pcmData, sampleRate);
+    const audioUrl = URL.createObjectURL(wavBlob);
+
+    this.bgmAudio = new Audio(audioUrl);
+    this.bgmAudio.loop = true;
+    this.bgmAudio.volume = 0.55;
+  },
+
+  createWavBlob(samples, sampleRate) {
+    const buffer = new ArrayBuffer(44 + samples.length * 2);
+    const view = new DataView(buffer);
+
+    const writeStr = (offset, str) => {
+      for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    };
+
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeStr(8, 'WAVE');
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true); // PCM
+    view.setUint16(22, 1, true); // Mono
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeStr(36, 'data');
+    view.setUint32(40, samples.length * 2, true);
+
+    let offset = 44;
+    for (let i = 0; i < samples.length; i++) {
+      const s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      offset += 2;
+    }
+
+    return new Blob([buffer], { type: 'audio/wav' });
+  },
+
+  playBgm() {
+    this.init();
+    if (!this.bgmAudio || this.musicMuted) return;
+    this.bgmAudio.play().catch(() => {});
+  },
+
+  pauseBgm() {
+    if (this.bgmAudio) {
+      this.bgmAudio.pause();
+    }
+  },
+
+  toggleMusic() {
+    this.init();
+    this.musicMuted = !this.musicMuted;
+    if (this.musicMuted) {
+      this.pauseBgm();
+    } else {
+      this.playBgm();
+    }
+    return !this.musicMuted;
+  },
+
+  // Sound Effects using Web Audio synth
+  playSfx(type) {
+    if (this.musicMuted) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      const now = ctx.currentTime;
+      if (type === 'jump') {
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(750, now + 0.15);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+        osc.start(now); osc.stop(now + 0.15);
+      } else if (type === 'slide') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.2);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+        osc.start(now); osc.stop(now + 0.2);
+      } else if (type === 'tv') {
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(1760, now + 0.18);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+        osc.start(now); osc.stop(now + 0.18);
+      } else if (type === 'crash') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(35, now + 0.4);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+        osc.start(now); osc.stop(now + 0.4);
+      }
+    } catch(e) {}
+  }
+};
+
+/* =========================================================
+   SAFE STORAGE & CANVAS HELPERS
+   ========================================================= */
+function safeGetStorage(key, def) {
+  try { return localStorage.getItem(key) || def; } catch (e) { return def; }
+}
+function safeSetStorage(key, val) {
+  try { localStorage.setItem(key, val); } catch (e) {}
+}
+
+function safeRoundRect(ctx, x, y, w, h, r) {
+  if (ctx.roundRect) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+}
+
+/* =========================================================
+   PROCEDURAL TEXTURES: OGGY'S HOUSE
+   ========================================================= */
+const Textures = {
+  floor() {
+    const c = document.createElement('canvas');
+    c.width = 512; c.height = 512;
+    const ctx = c.getContext('2d');
+    const tileSize = 128;
+    for (let x = 0; x < 512; x += tileSize) {
+      for (let y = 0; y < 512; y += tileSize) {
+        const isPink = ((x / tileSize) + (y / tileSize)) % 2 === 0;
+        ctx.fillStyle = isPink ? '#f43f5e' : '#c084fc';
+        ctx.fillRect(x, y, tileSize, tileSize);
+        ctx.strokeStyle = isPink ? '#fb7185' : '#d8b4fe';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(x + 3, y + 3, tileSize - 6, tileSize - 6);
+      }
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(2, 16);
+    return tex;
+  },
+
+  wall() {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 256;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#d8b4fe';
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.fillStyle = '#c084fc';
+    for (let x = 0; x < 256; x += 32) {
+      ctx.fillRect(x, 0, 8, 256);
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(1, 10);
+    return tex;
+  },
+
+  framePortrait(type) {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 256;
+    const ctx = c.getContext('2d');
+
+    ctx.fillStyle = '#eab308';
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.fillStyle = '#ca8a04';
+    ctx.fillRect(14, 14, 228, 228);
+
+    ctx.fillStyle = type === 'oggy' ? '#f43f5e' : (type === 'jack' ? '#15803d' : (type === 'bob' ? '#ea580c' : '#7c3aed'));
+    ctx.fillRect(24, 24, 208, 208);
+
+    if (type === 'oggy') {
+      ctx.fillStyle = '#0284c7'; ctx.beginPath(); ctx.arc(128, 140, 60, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f1f5f9'; ctx.beginPath(); ctx.ellipse(128, 160, 45, 28, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#dc2626'; ctx.beginPath(); ctx.arc(128, 145, 24, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#84cc16';
+      ctx.beginPath(); ctx.arc(110, 115, 12, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(146, 115, 12, 0, Math.PI * 2); ctx.fill();
+    } else if (type === 'jack') {
+      ctx.fillStyle = '#22c55e'; ctx.beginPath(); ctx.arc(128, 140, 60, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#e2e8f0'; ctx.beginPath(); ctx.ellipse(128, 165, 45, 24, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#dc2626'; ctx.beginPath(); ctx.arc(128, 150, 20, 0, Math.PI * 2); ctx.fill();
+    } else if (type === 'bob') {
+      ctx.fillStyle = '#a8a29e'; ctx.beginPath(); ctx.ellipse(128, 140, 65, 55, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(128, 140, 22, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#dc2626'; ctx.fillRect(75, 175, 106, 16);
+    } else {
+      ctx.fillStyle = '#fef08a'; ctx.fillRect(35, 35, 186, 186);
+      ctx.fillStyle = '#000000'; ctx.font = 'bold 22px Arial Black'; ctx.textAlign = 'center';
+      ctx.fillText('WANTED', 128, 70);
+      ctx.fillStyle = '#ec4899'; ctx.beginPath(); ctx.arc(128, 130, 32, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#000000'; ctx.fillText('JOEY', 128, 195);
+    }
+
+    return new THREE.CanvasTexture(c);
+  }
+};
+
+/* =========================================================
+   CARTOON ART GENERATION
+   ========================================================= */
+let currentSkin = 'corp';
+const CartoonArt = {
+  createOggyTexture(legOffset = 0, skin = 'corp') {
+    const c = document.createElement('canvas');
+    c.width = 512; c.height = 512;
+    const ctx = c.getContext('2d');
+
+    ctx.strokeStyle = '#0284c7'; ctx.lineWidth = 18; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(210, 360);
+    ctx.quadraticCurveTo(120, 340, 100 + Math.sin(legOffset) * 20, 260);
+    ctx.stroke();
+
+    ctx.fillStyle = '#0284c7'; ctx.strokeStyle = '#0369a1'; ctx.lineWidth = 6;
+    ctx.save();
+    ctx.translate(210, 380); ctx.rotate(-Math.sin(legOffset) * 0.7);
+    safeRoundRect(ctx, -22, 0, 44, 90, 15); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.ellipse(0, 95, 32, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle = skin === 'agent' ? '#1e293b' : '#0284c7';
+    ctx.strokeStyle = '#0369a1'; ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.ellipse(256, 320, 90, 105, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+    ctx.fillStyle = skin === 'agent' ? '#ffffff' : '#f1f5f9';
+    ctx.beginPath(); ctx.ellipse(256, 335, 62, 75, 0, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = '#0284c7'; ctx.strokeStyle = '#0369a1'; ctx.lineWidth = 6;
+    ctx.save();
+    ctx.translate(285, 380); ctx.rotate(Math.sin(legOffset) * 0.7);
+    safeRoundRect(ctx, -22, 0, 44, 90, 15); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.ellipse(0, 95, 32, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle = '#0284c7'; ctx.strokeStyle = '#0369a1'; ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.moveTo(190, 140); ctx.lineTo(155, 65); ctx.lineTo(225, 110); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(322, 140); ctx.lineTo(357, 65); ctx.lineTo(287, 110); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+    ctx.beginPath(); ctx.ellipse(256, 175, 100, 85, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f1f5f9';
+    ctx.beginPath(); ctx.ellipse(256, 205, 75, 45, 0, 0, Math.PI * 2); ctx.fill();
+
+    ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(180, 205); ctx.lineTo(95, 195); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(180, 218); ctx.lineTo(100, 228); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(332, 205); ctx.lineTo(417, 195); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(332, 218); ctx.lineTo(412, 228); ctx.stroke();
+
+    for (let s of [-1, 1]) {
+      ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.ellipse(256 + s * 34, 145, 26, 36, s * 0.08, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#84cc16';
+      ctx.beginPath(); ctx.ellipse(256 + s * 32, 148, 14, 20, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#000000';
+      ctx.beginPath(); ctx.arc(256 + s * 32, 148, 8, 0, Math.PI * 2); ctx.fill();
+    }
+
+    ctx.fillStyle = '#dc2626'; ctx.strokeStyle = '#991b1b'; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.arc(256, 195, 36, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+    return new THREE.CanvasTexture(c);
+  },
+
+  createJoeyTexture(legOffset = 0) {
+    const c = document.createElement('canvas');
+    c.width = 512; c.height = 512;
+    const ctx = c.getContext('2d');
+
+    ctx.strokeStyle = '#4a044e'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(235, 170); ctx.bezierCurveTo(170, 100, 110, 90 + Math.sin(legOffset) * 20, 80, 120); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(277, 170); ctx.bezierCurveTo(342, 100, 402, 90 - Math.sin(legOffset) * 20, 432, 120); ctx.stroke();
+
+    ctx.strokeStyle = '#581c87'; ctx.lineWidth = 10;
+    for (let i = 0; i < 3; i++) {
+      const dir = (i % 2 === 0 ? 1 : -1) * Math.sin(legOffset + i * 1.5);
+      ctx.beginPath(); ctx.moveTo(210, 310 + i * 40); ctx.lineTo(130, 340 + dir * 30); ctx.lineTo(110, 460 + dir * 15); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(302, 310 + i * 40); ctx.lineTo(382, 340 - dir * 30); ctx.lineTo(402, 460 - dir * 15); ctx.stroke();
+    }
+
+    ctx.fillStyle = '#6b21a8'; ctx.strokeStyle = '#3b0764'; ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.ellipse(256, 350, 75, 105, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+    ctx.fillStyle = '#ec4899'; ctx.strokeStyle = '#9d174d'; ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.ellipse(256, 210, 68, 55, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+    ctx.fillStyle = '#fde047'; ctx.beginPath(); ctx.ellipse(225, 185, 25, 34, -0.15, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#dc2626'; ctx.beginPath(); ctx.arc(227, 185, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#f472b6'; ctx.beginPath(); ctx.ellipse(287, 185, 25, 34, 0.15, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#eab308'; ctx.beginPath(); ctx.arc(285, 185, 9, 0, Math.PI * 2); ctx.fill();
+
+    return new THREE.CanvasTexture(c);
+  }
+};
+
+/* =========================================================
+   GAME ENGINE STATE & THREE.JS
+   ========================================================= */
+const LANES = [-2.2, 0, 2.2];
+let currentLane = 1;
+
+let scene, camera, renderer;
+let oggyMesh, cockroachMesh;
+let oggyTextures = [], joeyTextures = [];
+let dustParticles;
+
+let isPlaying = false;
+const START_SPEED = 13.0;
+let speed = START_SPEED;
+let distanceTraveled = 0;
+let tvsCollected = 0;
+let bankedTvs = parseInt(safeGetStorage('oggy_banked_tvs', '0'));
+let bestDistance = parseInt(safeGetStorage('oggy_best_distance', '0'));
+
+let shakeIntensity = 0;
+let feverMeter = 0;
+let isFeverActive = false;
+
+let yVelocity = 0;
+let isJumping = false;
+let isSliding = false;
+let slideTimer = 0;
+const GRAVITY = 40;
+const JUMP_STRENGTH = 14;
+
+let trackTiles = [];
+let obstacles = [];
+let pickups = [];
+const TILE_LENGTH = 35;
+const TILE_COUNT = 7;
+let nextSpawnZ = -20;
+
+let materials = {};
+
+function initMaterials() {
+  materials.floor = new THREE.MeshStandardMaterial({
+    map: Textures.floor(),
+    roughness: 0.35,
+    metalness: 0.1
+  });
+  materials.wall = new THREE.MeshStandardMaterial({
+    map: Textures.wall(),
+    roughness: 0.8
+  });
+  materials.ceiling = new THREE.MeshStandardMaterial({
+    color: 0xfef08a,
+    roughness: 0.9
+  });
+  materials.baseboard = new THREE.MeshStandardMaterial({
+    color: 0x9333ea,
+    roughness: 0.5
+  });
+
+  materials.frames = [
+    new THREE.MeshBasicMaterial({ map: Textures.framePortrait('oggy') }),
+    new THREE.MeshBasicMaterial({ map: Textures.framePortrait('jack') }),
+    new THREE.MeshBasicMaterial({ map: Textures.framePortrait('bob') }),
+    new THREE.MeshBasicMaterial({ map: Textures.framePortrait('wanted') })
+  ];
+}
+
+function updateSkins() {
+  oggyTextures = [
+    CartoonArt.createOggyTexture(0, currentSkin),
+    CartoonArt.createOggyTexture(Math.PI / 2, currentSkin),
+    CartoonArt.createOggyTexture(Math.PI, currentSkin),
+    CartoonArt.createOggyTexture(Math.PI * 1.5, currentSkin)
+  ];
+  if (oggyMesh) oggyMesh.material.map = oggyTextures[0];
+}
+
+function buildCharacterSprites() {
+  updateSkins();
+  joeyTextures = [
+    CartoonArt.createJoeyTexture(0),
+    CartoonArt.createJoeyTexture(Math.PI / 2),
+    CartoonArt.createJoeyTexture(Math.PI),
+    CartoonArt.createJoeyTexture(Math.PI * 1.5)
+  ];
+
+  const oggyGeo = new THREE.PlaneGeometry(2.3, 2.3);
+  const oggyMat = new THREE.MeshStandardMaterial({
+    map: oggyTextures[0],
+    transparent: true,
+    alphaTest: 0.05,
+    roughness: 0.5
+  });
+  oggyMesh = new THREE.Mesh(oggyGeo, oggyMat);
+  oggyMesh.position.set(0, 1.15, 0);
+  oggyMesh.castShadow = true;
+  scene.add(oggyMesh);
+
+  const joeyGeo = new THREE.PlaneGeometry(1.9, 1.9);
+  const joeyMat = new THREE.MeshStandardMaterial({
+    map: joeyTextures[0],
+    transparent: true,
+    alphaTest: 0.05,
+    roughness: 0.5
+  });
+  cockroachMesh = new THREE.Mesh(joeyGeo, joeyMat);
+  cockroachMesh.position.set(0, 0.95, 3.2);
+  cockroachMesh.castShadow = true;
+  scene.add(cockroachMesh);
+}
+
+function showPopupText(text, color = '#f43f5e') {
+  const container = document.getElementById('game-container');
+  const el = document.createElement('div');
+  el.className = 'popup-text';
+  el.textContent = text;
+  el.style.color = color;
+  el.style.left = (window.innerWidth / 2 + (Math.random() - 0.5) * 160) + 'px';
+  el.style.top = (window.innerHeight / 2 - 40 + (Math.random() - 0.5) * 80) + 'px';
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 850);
+}
+
+/* =========================================================
+   SOFA & TABLE OBSTACLES
+   ========================================================= */
+function createSofaObstacle() {
+  const group = new THREE.Group();
+  const couchMat = new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.6 });
+  const cushionMat = new THREE.MeshStandardMaterial({ color: 0xf43f5e, roughness: 0.5 });
+  const woodLegMat = new THREE.MeshStandardMaterial({ color: 0x78350f });
+
+  const base = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 0.8), couchMat);
+  base.position.y = 0.35;
+  base.castShadow = true;
+  group.add(base);
+
+  for (let s of [-0.4, 0.4]) {
+    const cushion = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.15, 0.72), cushionMat);
+    cushion.position.set(s, 0.58, 0.02);
+    group.add(cushion);
+  }
+
+  const back = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.65, 0.25), couchMat);
+  back.position.set(0, 0.78, 0.3);
+  back.castShadow = true;
+  group.add(back);
+
+  for (let s of [-0.85, 0.85]) {
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.85, 12), couchMat);
+    arm.rotation.x = Math.PI / 2;
+    arm.position.set(s, 0.62, 0);
+    group.add(arm);
+  }
+
+  for (let x of [-0.7, 0.7]) {
+    for (let z of [-0.3, 0.3]) {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.03, 0.18, 8), woodLegMat);
+      leg.position.set(x, 0.09, z);
+      group.add(leg);
+    }
+  }
+
+  return group;
+}
+
+function createTableObstacle() {
+  const group = new THREE.Group();
+  const woodTableMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.5 });
+  const clothMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.7 });
+
+  const top = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.18, 1.1), woodTableMat);
+  top.position.y = 1.68;
+  top.castShadow = true;
+  group.add(top);
+
+  const cloth = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.04, 1.12), clothMat);
+  cloth.position.y = 1.78;
+  group.add(cloth);
+
+  for (let x of [-0.95, 0.95]) {
+    for (let z of [-0.45, 0.45]) {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 1.68, 10), woodTableMat);
+      leg.position.set(x, 0.84, z);
+      leg.castShadow = true;
+      group.add(leg);
+    }
+  }
+
+  return group;
+}
+
+function spawnObstacle(lane, z, type) {
+  let group = (type === 'jump') ? createSofaObstacle() : createTableObstacle();
+  group.userData = (type === 'jump') ? { type: 'jump', height: 0.9 } : { type: 'slide' };
+  group.position.set(LANES[lane], 0, z);
+  scene.add(group);
+  obstacles.push(group);
+}
+
+function spawnTelevision(lane, z) {
+  const group = new THREE.Group();
+  const wood = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.6 });
+  const screen = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.4 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.62, 0.55), wood);
+  body.castShadow = true; group.add(body);
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.42), screen);
+  scr.position.set(-0.06, 0, -0.29); scr.rotation.y = Math.PI; group.add(scr);
+  group.scale.set(1.15, 1.15, 1.15);
+  group.position.set(LANES[lane], 0.9, z);
+  scene.add(group);
+  pickups.push(group);
+}
+
+function createHouseTile(zPos) {
+  const tileGroup = new THREE.Group();
+
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(9, TILE_LENGTH), materials.floor);
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; tileGroup.add(floor);
+
+  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(9, TILE_LENGTH), materials.ceiling);
+  ceiling.position.y = 4.0; ceiling.rotation.x = Math.PI / 2; tileGroup.add(ceiling);
+
+  for (let s of [-1, 1]) {
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(0.4, 4.0, TILE_LENGTH), materials.wall);
+    wall.position.set(s * 4.6, 2.0, 0); wall.receiveShadow = true; tileGroup.add(wall);
+
+    const baseboard = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.35, TILE_LENGTH), materials.baseboard);
+    baseboard.position.set(s * 4.6, 0.175, 0); tileGroup.add(baseboard);
+
+    for (let i = 0; i < 3; i++) {
+      const zOffset = -TILE_LENGTH / 3 + i * (TILE_LENGTH / 3);
+      const frameIdx = (Math.abs(Math.round(zPos / TILE_LENGTH)) + i) % materials.frames.length;
+      const portrait = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), materials.frames[frameIdx]);
+      portrait.position.set(s * 4.38, 2.3, zOffset);
+      portrait.rotation.y = s * -Math.PI / 2;
+      tileGroup.add(portrait);
+    }
+  }
+
+  tileGroup.position.z = zPos;
+  scene.add(tileGroup);
+  return tileGroup;
+}
+
+/* =========================================================
+   SCENE INITIALIZATION & EVENT LISTENERS
+   ========================================================= */
+function init() {
+  const container = document.getElementById('game-container');
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x581c87);
+  scene.fog = new THREE.Fog(0x581c87, 30, 90);
+
+  camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 150);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  container.appendChild(renderer.domElement);
+
+  initMaterials();
+
+  const hemiLight = new THREE.HemisphereLight(0xffedd5, 0x581c87, 0.9);
+  scene.add(hemiLight);
+
+  const dirLight = new THREE.DirectionalLight(0xfffbeb, 1.0);
+  dirLight.position.set(6, 18, 6); dirLight.castShadow = true;
+  scene.add(dirLight);
+
+  const dustGeo = new THREE.BufferGeometry();
+  const dustPos = [];
+  for (let i = 0; i < 200; i++) dustPos.push((Math.random() - 0.5) * 10, Math.random() * 4, (Math.random() - 0.5) * 30);
+  dustGeo.setAttribute('position', new THREE.Float32BufferAttribute(dustPos, 3));
+  dustParticles = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: 0xffe4e6, size: 0.04, transparent: true, opacity: 0.5 }));
+  scene.add(dustParticles);
+
+  buildCharacterSprites();
+
+  for (let i = 0; i < TILE_COUNT; i++) trackTiles.push(createHouseTile(-i * TILE_LENGTH));
+
+  document.getElementById('best-val').textContent = bestDistance + ' m';
+  setupEventListeners();
+  window.addEventListener('resize', onResize);
+}
+
+function getChallengeText() {
+  return `📺 I escaped Joey across ${Math.floor(distanceTraveled)}m in Oggy's House and saved ${tvsCollected} TVs! Can you beat my score? Play Oggy Rush!`;
+}
+
+function setupEventListeners() {
+  window.addEventListener('keydown', (e) => {
+    if (!isPlaying) return;
+    if ((e.code === 'ArrowLeft' || e.key === 'a' || e.key === 'A') && currentLane > 0) {
+      currentLane--;
+    } else if ((e.code === 'ArrowRight' || e.key === 'd' || e.key === 'D') && currentLane < 2) {
+      currentLane++;
+    } else if ((e.code === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space') && !isJumping && !isSliding) {
+      isJumping = true; yVelocity = JUMP_STRENGTH; AudioSys.playSfx('jump');
+    } else if ((e.code === 'ArrowDown' || e.key === 's' || e.key === 'S') && !isSliding) {
+      if (isJumping) yVelocity = -22;
+      isSliding = true; slideTimer = 0.55; AudioSys.playSfx('slide');
+    }
+  });
+
+  let touchX = 0, touchY = 0;
+  window.addEventListener('touchstart', (e) => {
+    touchX = e.changedTouches[0].clientX; touchY = e.changedTouches[0].clientY;
+  }, { passive: true });
+
+  window.addEventListener('touchend', (e) => {
+    if (!isPlaying) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    const dy = e.changedTouches[0].clientY - touchY;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (dx < -30 && currentLane > 0) currentLane--;
+      else if (dx > 30 && currentLane < 2) currentLane++;
+    } else {
+      if (dy < -30 && !isJumping && !isSliding) {
+        isJumping = true; yVelocity = JUMP_STRENGTH; AudioSys.playSfx('jump');
+      } else if (dy > 30 && !isSliding) {
+        if (isJumping) yVelocity = -22;
+        isSliding = true; slideTimer = 0.55; AudioSys.playSfx('slide');
+      }
+    }
+  }, { passive: true });
+
+  // START BUTTON
+  document.getElementById('start-btn').addEventListener('click', startGame);
+  document.getElementById('restart-btn').addEventListener('click', restartGame);
+
+  // TOP MUSIC BUTTON: Directly toggles audio
+  const musicBtn = document.getElementById('music-btn');
+  musicBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const on = AudioSys.toggleMusic();
+    musicBtn.textContent = on ? '🎵 MUSIC: ON' : '🔇 MUSIC: OFF';
+    if (on) musicBtn.classList.remove('muted');
+    else musicBtn.classList.add('muted');
+  });
+
+  // Shop Modals
+  document.getElementById('open-shop-btn').addEventListener('click', () => {
+    document.getElementById('banked-tvs').textContent = bankedTvs;
+    document.getElementById('shop-modal').style.display = 'flex';
+  });
+  document.getElementById('close-shop-btn').addEventListener('click', () => {
+    document.getElementById('shop-modal').style.display = 'none';
+  });
+
+  document.getElementById('skin-corp-btn').addEventListener('click', () => { currentSkin = 'corp'; updateSkins(); });
+  document.getElementById('skin-agent-btn').addEventListener('click', () => {
+    if (bankedTvs >= 50) { currentSkin = 'agent'; updateSkins(); showPopupText("AGENT OGGY EQUIPPED!", "#38bdf8"); }
+  });
+  document.getElementById('skin-chef-btn').addEventListener('click', () => {
+    if (bankedTvs >= 100) { currentSkin = 'chef'; updateSkins(); showPopupText("CHEF OGGY EQUIPPED!", "#22c55e"); }
+  });
+
+  // UNIVERSAL SHARE BUTTON
+  document.getElementById('share-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const text = getChallengeText();
+    document.getElementById('share-summary-text').textContent = `Your Run: ${Math.floor(distanceTraveled)}m & ${tvsCollected} TVs!`;
+    document.getElementById('share-text-preview').value = text;
+    document.getElementById('share-modal').style.display = 'flex';
+
+    document.getElementById('share-wa-btn').onclick = () => {
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+    };
+    document.getElementById('share-tg-btn').onclick = () => {
+      window.open(`https://t.me/share/url?text=${encodeURIComponent(text)}&url=`, '_blank');
+    };
+    document.getElementById('share-x-btn').onclick = () => {
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+    };
+    document.getElementById('share-copy-btn').onclick = () => {
+      copyToClipboard(text);
+      const btn = document.getElementById('share-copy-btn');
+      btn.textContent = '✅ COPIED TO CLIPBOARD!';
+      setTimeout(() => { btn.textContent = '📋 Copy Challenge Text'; }, 2000);
+    };
+  });
+
+  document.getElementById('close-share-btn').addEventListener('click', () => {
+    document.getElementById('share-modal').style.display = 'none';
+  });
+}
+
+function copyToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.style.position = "fixed";
+  textArea.style.left = "-999999px";
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  try {
+    document.execCommand('copy');
+  } catch (err) {}
+  textArea.remove();
+}
+
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+/* =========================================================
+   MAIN GAME LOOP
+   ========================================================= */
+let lastTime = performance.now();
+
+function animate(currentTime) {
+  requestAnimationFrame(animate);
+  const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+  lastTime = currentTime;
+
+  if (isPlaying) {
+    updateGame(dt);
+  }
+
+  if (shakeIntensity > 0) {
+    camera.position.x += (Math.random() - 0.5) * shakeIntensity;
+    camera.position.y += (Math.random() - 0.5) * shakeIntensity;
+    shakeIntensity = Math.max(0, shakeIntensity - dt * 3.5);
+  }
+
+  renderer.render(scene, camera);
+}
+
+function updateGame(dt) {
+  const feverBoost = isFeverActive ? 8.0 : 0;
+  speed = START_SPEED + Math.min(distanceTraveled * 0.004, 15.0) + feverBoost;
+  distanceTraveled += speed * dt;
+
+  document.getElementById('dist-val').textContent = Math.floor(distanceTraveled) + ' m';
+
+  oggyMesh.position.z -= speed * dt;
+  const targetX = LANES[currentLane];
+  oggyMesh.position.x += (targetX - oggyMesh.position.x) * 14 * dt;
+
+  if (isJumping) {
+    oggyMesh.position.y += yVelocity * dt;
+    yVelocity -= GRAVITY * dt;
+    if (oggyMesh.position.y <= 1.15) {
+      oggyMesh.position.y = 1.15;
+      isJumping = false;
+      yVelocity = 0;
+      shakeIntensity = 0.08;
+    }
+  }
+
+  if (isSliding) {
+    slideTimer -= dt;
+    oggyMesh.scale.set(1.4, 0.35, 1);
+    oggyMesh.position.y = 0.45;
+    if (slideTimer <= 0) {
+      isSliding = false;
+      oggyMesh.scale.set(1, 1, 1);
+      oggyMesh.position.y = 1.15;
+    }
+  } else if (!isJumping) {
+    oggyMesh.scale.set(1, 1, 1);
+  }
+
+  const frameIndex = Math.floor((performance.now() * 0.008 * (speed / 13)) % 4);
+  if (!isJumping && !isSliding) oggyMesh.material.map = oggyTextures[frameIndex];
+  cockroachMesh.material.map = joeyTextures[frameIndex];
+
+  cockroachMesh.position.z = oggyMesh.position.z + (isFeverActive ? 5.5 : 3.2);
+  cockroachMesh.position.x += (oggyMesh.position.x - cockroachMesh.position.x) * 5 * dt;
+
+  if (isFeverActive) {
+    feverMeter -= dt * 20;
+    if (feverMeter <= 0) {
+      feverMeter = 0;
+      isFeverActive = false;
+    }
+  }
+  document.getElementById('fever-bar').style.width = feverMeter + '%';
+
+  camera.position.x = oggyMesh.position.x * 0.42;
+  camera.position.y = (oggyMesh.position.y - 1.15) * 0.35 + 3.8;
+  camera.position.z = oggyMesh.position.z + 6.4;
+  camera.lookAt(oggyMesh.position.x * 0.5, 1.8, oggyMesh.position.z - 6.5);
+  dustParticles.position.z = oggyMesh.position.z;
+
+  trackTiles.forEach((tile) => {
+    if (tile.position.z > camera.position.z + 10) {
+      const minZ = Math.min(...trackTiles.map(t => t.position.z));
+      tile.position.z = minZ - TILE_LENGTH;
+    }
+  });
+
+  if (oggyMesh.position.z - 65 < nextSpawnZ) {
+    spawnWave(nextSpawnZ);
+    nextSpawnZ -= (20 + Math.random() * 8);
+  }
+
+  pickups.forEach(p => { p.rotation.y += dt * 3.0; });
+
+  checkCollisions();
+}
+
+function spawnWave(zPos) {
+  const freeLane = Math.floor(Math.random() * 3);
+  for (let l = 0; l < 3; l++) {
+    if (l === freeLane) {
+      if (Math.random() > 0.25) spawnTelevision(l, zPos);
+    } else {
+      spawnObstacle(l, zPos, Math.random() < 0.5 ? 'jump' : 'slide');
+    }
+  }
+}
+
+function checkCollisions() {
+  const oggyZ = oggyMesh.position.z;
+  const oggyX = oggyMesh.position.x;
+  const oggyY = oggyMesh.position.y;
+
+  for (let i = 0; i < obstacles.length; i++) {
+    const obs = obstacles[i];
+    const dz = Math.abs(obs.position.z - oggyZ);
+    const dx = Math.abs(obs.position.x - oggyX);
+
+    if (dz < 1.4 && dx > 0.85 && dx < 1.35 && !obs.userData.closeCallGiven) {
+      obs.userData.closeCallGiven = true;
+      showPopupText("CLOSE CALL! +25", "#fbbf24");
+      shakeIntensity = 0.05;
+      distanceTraveled += 25;
+    }
+
+    if (dz < 0.75 && dx < 0.8) {
+      if (isFeverActive) {
+        scene.remove(obs); obstacles.splice(i, 1); i--;
+        showPopupText("SMASH! 💥", "#ef4444");
+        shakeIntensity = 0.15;
+        continue;
+      }
+
+      const fatal = (obs.userData.type === 'jump' && oggyY < obs.userData.height + 0.8) ||
+                    (obs.userData.type === 'slide' && !isSliding);
+
+      if (fatal) {
+        const reason = obs.userData.type === 'jump' ? 
+          "Oggy tripped on the living room sofa!" : 
+          "Oggy crashed into the dining table!";
+        triggerGameOver(reason);
+        return;
+      }
+    }
+
+    if (obs.position.z > oggyZ + 15) {
+      scene.remove(obs); obstacles.splice(i, 1); i--;
+    }
+  }
+
+  for (let i = 0; i < pickups.length; i++) {
+    const p = pickups[i];
+    if (Math.abs(p.position.z - oggyZ) < 0.85 && Math.abs(p.position.x - oggyX) < 0.85) {
+      tvsCollected += 1;
+      bankedTvs += 1;
+      safeSetStorage('oggy_banked_tvs', bankedTvs);
+      document.getElementById('score-val').textContent = tvsCollected;
+
+      showPopupText("+1 TV", "#38bdf8");
+      AudioSys.playSfx('tv');
+
+      if (!isFeverActive) {
+        feverMeter = Math.min(100, feverMeter + 10);
+        if (feverMeter >= 100) {
+          isFeverActive = true;
+          showPopupText("🔥 FEVER SPRINT! 🔥", "#ef4444");
+          shakeIntensity = 0.25;
+        }
+      }
+
+      scene.remove(p); pickups.splice(i, 1); i--;
+    }
+  }
+}
+
+/* =========================================================
+   START / RESTART CONTROLS
+   ========================================================= */
+function startGame() {
+  document.getElementById('start-screen').style.display = 'none';
+  resetGameState();
+  isPlaying = true;
+  AudioSys.playBgm();
+}
+
+function restartGame() {
+  document.getElementById('game-over-screen').style.display = 'none';
+  document.getElementById('share-modal').style.display = 'none';
+  resetGameState();
+  isPlaying = true;
+  AudioSys.playBgm();
+}
+
+function resetGameState() {
+  speed = START_SPEED;
+  distanceTraveled = 0;
+  tvsCollected = 0;
+  currentLane = 1;
+  isJumping = false;
+  isSliding = false;
+  feverMeter = 0;
+  isFeverActive = false;
+  nextSpawnZ = -25;
+
+  document.getElementById('score-val').textContent = '0';
+  document.getElementById('dist-val').textContent = '0 m';
+
+  obstacles.forEach(o => scene.remove(o));
+  pickups.forEach(p => scene.remove(p));
+  obstacles = []; pickups = [];
+
+  oggyMesh.position.set(0, 1.15, 0);
+  cockroachMesh.position.set(0, 0.95, 3.2);
+
+  trackTiles.forEach((tile, idx) => { tile.position.z = -idx * TILE_LENGTH; });
+}
+
+function triggerGameOver(reason) {
+  isPlaying = false;
+  AudioSys.playSfx('crash');
+  shakeIntensity = 0.35;
+
+  if (distanceTraveled > bestDistance) {
+    bestDistance = Math.floor(distanceTraveled);
+    safeSetStorage('oggy_best_distance', bestDistance);
+    document.getElementById('best-val').textContent = bestDistance + ' m';
+    showPopupText("🏆 NEW HIGH SCORE! 🏆", "#fbbf24");
+  }
+
+  document.getElementById('death-reason').textContent = reason;
+  document.getElementById('final-dist').textContent = Math.floor(distanceTraveled) + 'm';
+  document.getElementById('final-tvs').textContent = tvsCollected;
+  document.getElementById('game-over-screen').style.display = 'flex';
+}
+
+// Single-boot initialization
+let booted = false;
+function bootGame() {
+  if (booted) return;
+  booted = true;
+  init();
+  requestAnimationFrame(animate);
+}
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', bootGame);
+} else {
+  bootGame();
+}
+</script>
+</body>
+</html>
